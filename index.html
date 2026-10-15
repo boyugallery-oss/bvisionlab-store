@@ -320,13 +320,16 @@ details.is-open .ic::after{transform:rotate(0deg)}
 @keyframes introRise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @keyframes introRiseS{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .hero-photo{overflow:hidden}
-/* 只在剛進網站時播一次（.intro 播完就拿掉，從結帳頁回來不會重播） */
-.intro .hero{animation:introFade .7s ease-out both}
-.intro .hero-photo img{animation:introZoom 1.6s cubic-bezier(.2,.7,.2,1) .1s both}
-.intro .hero-text>*{animation:introRise .9s cubic-bezier(.2,.7,.2,1) both}
-.intro .hero-text>*{animation-delay:.35s}              /* 小標、大標題、副標題同時出現 */
-.intro .hero-text>.links{animation:introRiseS .9s ease-out .6s both}   /* 和上方 logo 同時、同速度出現 */         /* 「即刻收藏」再單獨出現 */
-.nav.intro .wrap{animation:introFade .9s ease-out .6s both}
+/* 只在剛進網站時播一次：頁面載入完成、真的顯示在螢幕上之後才加上 .play 開始播
+   （手機下載比較慢，太早播的話客人看到畫面時動畫已經結束）；播完拿掉，從結帳頁回來不會重播 */
+@media (prefers-reduced-motion:no-preference){
+  .intro:not(.play) .hero,.nav.intro:not(.play) .wrap{opacity:0}
+}
+.intro.play .hero{animation:introFade .7s ease-out both}
+.intro.play .hero-photo img{animation:introZoom 1.6s cubic-bezier(.2,.7,.2,1) .1s both}
+.intro.play .hero-text>*{animation:introRise .9s cubic-bezier(.2,.7,.2,1) .35s both}   /* 小標、大標題、副標題同時出現 */
+.intro.play .hero-text>.links{animation:introRiseS .9s ease-out .6s both}            /* 「即刻收藏」和上方 logo 同時、同速度出現 */
+.nav.intro.play .wrap{animation:introFade .9s ease-out .6s both}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 /* 電腦版：每一屏都從畫面最上緣開始（標題列往下滑會收起），上方留出標題列的高度，標題列出現時也不會蓋到內容 */
 @media (min-width:821px){
@@ -729,7 +732,17 @@ document.querySelectorAll('.ink-btn').forEach(b=>b.addEventListener('pointerente
   const far = Math.hypot(Math.max(x, r.width - x), Math.max(y, r.height - y));   // 到最遠角落的距離：墨剛好在動畫結束時染滿
   b.style.setProperty('--x', x + 'px'); b.style.setProperty('--y', y + 'px'); b.style.setProperty('--d', (far * 2 + 40) + 'px');
 }));
-setTimeout(()=>document.querySelectorAll('.intro').forEach(el=>el.classList.remove('intro')), 2000);   // 進場動畫播完
+let introPlayed = false;
+function playIntro(){
+  if (introPlayed) return; introPlayed = true;
+  const els = [...document.querySelectorAll('.intro')];
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{          // 等畫面真的畫出來
+    els.forEach(el=>el.classList.add('play'));
+    setTimeout(()=>els.forEach(el=>el.classList.remove('intro','play')), 2300);   // 播完
+  }));
+}
+if (document.readyState === 'complete') playIntro(); else addEventListener('load', playIntro);
+setTimeout(playIntro, 3000);   // 保險：萬一 load 事件遲遲不來，最多等 3 秒
 const snapOff = () => innerWidth > 820 ? 0 : NAV_H;   // 電腦版整屏對齊畫面最上緣（標題列往下滑時會收起）
 updateNav(true);
 let glide = null;

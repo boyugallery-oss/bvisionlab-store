@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light only">
 <meta name="description" content="簡伯諭書法 × B VISION LAB 新年紀念紅包套組，7-11 店到店取貨。">
 <title>B VISION LAB 新春紅包</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -23,7 +24,9 @@
   --script:"Pinyon Script","Snell Roundhand",cursive;
   --r:18px;
 }
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+/* Boyu 決定：手機開深色模式也一律顯示淺色設計（原本的深色配色停用） */
+:root{color-scheme:light only}
+@media not all{:root:not([data-theme="light"]){
   --bg:#000000; --bg-2:#141416; --card:#1c1c1e; --fg:#f5f5f7; --fg-2:#a1a1a6; --line:#3a3a3c;
   --red:#e33a43; --red-press:#c92f38; --red-soft:#3a1517; --ok:#3fbf6e; --ok-soft:#14301f; color-scheme:dark}}
 :root[data-theme="dark"]{
@@ -1353,9 +1356,24 @@ function glideTo(y, dur=760){
     const t = Math.min(1, (now - t0) / dur);
     scrollTo(0, from + dist * ease(t));
     if (t < 1) glide.raf = requestAnimationFrame(step);
-    else { glide = null; document.documentElement.style.scrollSnapType = ''; }
+    else { glide = null; document.documentElement.style.scrollSnapType = ''; holdAt(y); }
   };
   glide.raf = requestAnimationFrame(step);
+}
+// iPhone（Safari、IG／LINE 內建瀏覽器）：吸附重新打開時，會吸回「程式捲動前停的那一屏」（例如點選單後又跳回第一頁）。
+// 重新打開吸附後立刻再定位一次，並在 1.5 秒內盯著：客人沒碰螢幕、畫面卻自己跑掉，就拉回目的地
+let lastTouch = 0;
+addEventListener('touchstart', ()=>{ lastTouch = performance.now(); }, { passive:true });
+addEventListener('wheel', ()=>{ lastTouch = performance.now(); }, { passive:true });
+function holdAt(y){
+  const t0 = performance.now();
+  scrollTo(0, y);
+  const check = ()=>{
+    if (glide || lastTouch > t0) return;                 // 又開始捲動、或客人自己在滑：不管
+    if (Math.abs(scrollY - y) > 2) scrollTo(0, y);
+    if (performance.now() - t0 < 1500) requestAnimationFrame(check);
+  };
+  requestAnimationFrame(check);
 }
 function pageStops(){
   return [0, ...['.s-collect','.s-artist','.product','.guide'].map(sel=>
@@ -1489,6 +1507,9 @@ $('pickStore').onclick = ()=>{
   saveDraft();
   const m = matchMedia('(max-width:820px)').matches ? 1 : 0;
   const url = `${API}/map?t=${location.pathname.startsWith('/test') ? 't' : 's'}&m=${m}`;
+  // 手機：直接在同一頁打開地圖（另開新分頁的話，新分頁沒有「上一頁」可以回到購物頁）。
+  // 地圖頁按上一頁會自動退回結帳頁；選好門市後收銀櫃台會把門市帶回購物頁（網址 #store=…），草稿已先存好
+  if (m && window.top === window){ location.href = url; return; }
   const w = window.open(url, 'cvsmap', m ? '' : 'width=1000,height=760');
   if (!w) location.href = url;   // 跳出視窗被擋住時，改成整頁開地圖
 };
